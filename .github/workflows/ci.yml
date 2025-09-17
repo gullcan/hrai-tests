@@ -1,36 +1,55 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch: # Manuel tetikleme için
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  tests:
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      # Node.js kurulum (Playwright + Newman)
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      # Playwright testleri
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Playwright tests
+        run: npx playwright test --reporter=line
+
+      # Newman API testleri
+      - name: Install Newman
+        run: npm install -g newman newman-reporter-html
+
+      - name: Run Newman tests
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          newman run postman/hrai-collection.json \
+            -e postman/hrai-environment.postman_environment.json \
+            --reporters cli,html \
+            --reporter-html-export newman-report.html
+
+      - name: Upload Newman report
+        uses: actions/upload-artifact@v3
+        with:
+          name: newman-report
+          path: newman-report.html
+
+      # JMeter performans testleri
+      - name: Install JMeter
+        run: sudo apt-get update && sudo apt-get install -y jmeter
+
+      - name: Run JMeter test
+        run: jmeter -n -t hrai-test-plan.jmx -l results.jtl -e -o jmeter-report
+
+      - name: Upload JMeter report
+        uses: actions/upload-artifact@v3
+        with:
+          name: jmeter-report
+          path: jmeter-report
