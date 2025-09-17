@@ -1,0 +1,34 @@
+name: HRAI CI
+
+on:
+  workflow_dispatch: # Manuel çalıştırma
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install -g newman newman-reporter-html
+
+      - name: Run Postman tests
+        run: |
+          newman run postman/hrai-collection.json \
+            -e postman/hrai-environment.postman_environment.json \
+            --reporters cli,html \
+            --reporter-html-export newman-reports/hrai-smoke-report.html
+
+      - name: Upload Newman Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: newman-report
+          path: newman-reports/hrai-smoke-report.html
+
